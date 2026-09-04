@@ -2,7 +2,9 @@
 
 Open-source скилл для AI-агента (opencode): переводит английский видео-файл в русский/казахский дубляж через бесплатный хак `api.browser.yandex.ru` (Яндекс Voice Over Translation). Без VPS и платных STT.
 
-Как это работает: файл заливается на Google Drive публичной ссылкой -> её забирает Yandex-фетчер -> возвращает mp3 перевода -> `ffmpeg` кладёт перевод поверх тихого оригинала (15%) без перекода видео.
+Как это работает: файл заливается на временный хостинг `uguu.se` (без регистрации, живёт 3 часа — хватает с запасом) -> ссылку забирает Yandex-фетчер -> возвращает mp3 перевода -> `ffmpeg` кладёт перевод поверх тихого оригинала (15%) без перекода видео. Файлы больше 128МБ идут через Google Drive (нужен service account key, см. «Креды»).
+
+Демо из спайка: видео 39с en -> `636КБ mp3` (kk) -> `20МБ mp4` с тихим оригиналом. Длинный кейс: Drive-файл 74МБ/34мин en -> ru SUCCESS за `poll 15с x20`.
 
 ## Установка
 
@@ -26,7 +28,7 @@ Copy-Item .env.example .env
 
 `ffmpeg` ставить отдельно не нужно — приезжает через `pip imageio-ffmpeg`.
 
-## Креды Google Drive (обязательно, ~5 минут)
+## Креды Google Drive (только для файлов >128МБ, остальным не нужно)
 
 Нужен **service account key** — это единственный формат, который понимает скилл. Не путай с «OAuth client ID» (файл OAuth-клиента здесь не подойдёт — в нём нет токенов).
 
@@ -76,16 +78,18 @@ python examples/translate_file.py ~/Desktop/video.mp4 --to kk
 SKILL.md              — триггер opencode (переведи видео -> translate_file)
 vot_core/             — yandex_api.py (protobuf + session-подпись, без правок логики) + config.py
 providers/base.py     — get_duration(), Provider.publish()
-providers/drive.py    — DriveProvider: uc?export=download (единственный провайдер v1)
-worker/pipeline.py    — translate_file(path, to="ru", use_lively=False) -> output_path
+providers/uguu.py     — UguuProvider: временный хостинг без кредов (по умолчанию, до 128МБ)
+providers/drive.py    — DriveProvider: uc?export=download (фолбек для файлов >128МБ)
+worker/pipeline.py    — translate_file(path, to="ru", use_lively=False) -> output_path (автовыбор провайдера по размеру)
 examples/translate_file.py — CLI-обёртка
-tests/                — test_yandex_api.py + test_pipeline.py (моки, без сети)
+tests/                — test_yandex_api.py + test_pipeline.py + test_uguu.py (моки, без сети)
 ```
 
 ## Ограничения v1
 
-- Только локальные файлы en -> ru/kk (стандарт) + en -> ru lively опцией.
-- Видео до 4 часов (лимит VoT).
+- Только локальные файлы en -> ru/kk (стандарт) + en -> ru lively опцией. `youtu.be`-ссылки остаются в `vot-tg-bot`.
+- Видео до 4 часов (лимит VoT), но Uguu отдаёт максимум 128МБ — большее идёт через Drive.
+- Провайдеры `LocalHttp/Tunnel/S3/Kinescope` — позже. Батчи и субтитры — не входят.
 
 ## Дисклеймер
 

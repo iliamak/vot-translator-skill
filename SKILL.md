@@ -5,8 +5,8 @@ metadata:
   openclaw:
     envVars:
       - name: GOOGLE_DRIVE_CREDENTIALS_JSON
-        required: true
-        description: Path to Google Drive service account key JSON (APIs & Services -> Service account -> Keys -> JSON). OAuth client files do NOT work here.
+        required: false
+        description: Only for video files over 128MB (Drive fallback). Path to Google Drive service account key JSON. Not needed for normal use.
 ---
 
 # VOT Translator Skill
@@ -51,7 +51,7 @@ python examples/translate_file.py ~/Desktop/video.mp4 --to kk
 
 1. Python >= 3.10. Зависимости: `pip install -r requirements.txt` (ffmpeg приезжает через `imageio-ffmpeg`, отдельный бинарь не нужен).
 2. Проверка установки (офлайн): `python tests/test_yandex_api.py` — жди `passed, 0 failed`.
-3. Env: `GOOGLE_DRIVE_CREDENTIALS_JSON=/путь/к/service-account-key.json` (см. `.env.example` и раздел «Креды» в README — нужен **service account key**, файл OAuth-клиента не подойдёт). Без него `DriveProvider.publish` упадёт с понятной ошибкой.
+3. Env обычно не нужен: файлы до 128МБ идут через Uguu без кредов. `GOOGLE_DRIVE_CREDENTIALS_JSON` (service account key, см. README «Креды») требуется только для файлов >128МБ — без него большие файлы упадут с понятной ошибкой.
 4. Корень запуска — корень скилла (чтобы импорты `vot_core`/`providers`/`worker` резолвились).
 
 ## Ошибки (прокидывай юзеру как есть)
@@ -59,7 +59,8 @@ python examples/translate_file.py ~/Desktop/video.mp4 --to kk
 - `Video >4h not supported` — лимит VoT, резать видео.
 - `Translation failed: ... — попробуй позже` — Яндекс отклонил (нет речи, перегрузка).
 - `...timed out... увеличь max_retries` — длинное видео, повтори с большим `max_retries`.
-- `Drive 404 ... Anyone with link` — проверь шаринг и креды.
+- `Drive 404 ... Anyone with link` — проверь шаринг и креды (только для файлов >128МБ).
+- `больше лимита Uguu (128МБ)` — файл слишком большой для пути без кредов, нужен DriveProvider + `.env`.
 - `use_lively работает только для en->ru` — убери флаг или смени `to="ru"`.
 
 ## Не входит в v1

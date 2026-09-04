@@ -15,6 +15,8 @@ from providers.base import (
     get_duration_async,
 )
 from providers.drive import DriveProvider
+from providers.uguu import MAX_SIZE as UGUU_MAX_SIZE
+from providers.uguu import UguuProvider
 from vot_core import yandex_api
 
 log = logging.getLogger("vot-skill")
@@ -31,6 +33,14 @@ SUPPORTED_LANGS = ("ru", "kk")
 
 def _skill_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def _default_provider(src: Path) -> Provider:
+    """Автовыбор: до 128МБ — Uguu без кредов, больше — Drive (нужен .env)."""
+    if src.stat().st_size <= UGUU_MAX_SIZE:
+        return UguuProvider()
+    log.debug("[pipeline] Файл >128МБ, переключаюсь на DriveProvider")
+    return DriveProvider()
 
 
 def _humanize_translate_error(e: Exception) -> str:
@@ -125,7 +135,7 @@ async def translate_file(
     if duration > MAX_DURATION_SEC:
         raise ValueError(f"Video >4h not supported (duration={duration:.0f}s)")
 
-    prov = provider or DriveProvider()
+    prov = provider or _default_provider(src)
     published: PublishResult | None = None
     tmp_mp3 = Path(tempfile.mkstemp(suffix=".mp3")[1])
     try:
