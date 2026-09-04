@@ -1,0 +1,7 @@
+# Python >= 3.10
+aiohttp>=3.9
+yt-dlp>=2024.1
+imageio-ffmpeg>=0.5
+python-dotenv>=1.0
+google-api-python-client>=2.0
+google-auth>=2.0
